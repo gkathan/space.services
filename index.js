@@ -1,0 +1,11 @@
+module.exports.ProblemService = require('./services/ProblemService');
+module.exports.TargetService = require('./services/TargetService');
+module.exports.IncidentService = require('./services/IncidentService');
+module.exports.IncidentTrackerService = require('./services/IncidentTrackerService');
+module.exports.AvailabilityService = require('./services/AvailabilityService');
+module.exports.LabelService = require('./services/LabelService');
+module.exports.OrganizationService = require('./services/OrganizationService');
+module.exports.PortfolioService = require('./services/PortfolioService');
+module.exports.SOCService = require('./services/SOCService');
+module.exports.V1Service = require('./services/V1Service');
+module.exports.SyncService = require('./services/SyncService');
