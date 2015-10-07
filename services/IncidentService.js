@@ -6,6 +6,8 @@ var mongojs = require('mongojs');
 var moment = require('moment');
 var async = require("async");
 require('moment-duration-format');
+
+var ld = require('lodash');
 _ = require('lodash');
 _.nst=require('underscore.nest');
 
@@ -84,7 +86,7 @@ function _flushAll(prio,callback){
 		_findRevenueImpactMapping(function(err,impactMapping){
 			for (var i in data.records){
 				var _incident = _filterRelevantData(data.records[i]);
-				var _impact = _.findWhere(impactMapping,{"incident":data.records[i].number});
+				var _impact = ld.findWhere(impactMapping,{"incident":data.records[i].number});
 				if (_impact){
 					 _incident.revenueImpact = parseInt(_impact.impact);
 				}
@@ -217,9 +219,9 @@ function _findAll(filter,sort,callback) {
 			logger.debug(".....findAll....oldincidents: "+oldincidents.length);
 
 			var _all;
-			if (sort && sort.openedAt ==1)  _all =_.union(oldincidents,incidents);
-			else if (sort && sort.openedAt ==-1)  _all =_.union(incidents,oldincidents);
-			else _all =_.union(incidents,oldincidents);
+			if (sort && sort.openedAt ==1)  _all =ld.union(oldincidents,incidents);
+			else if (sort && sort.openedAt ==-1)  _all =ld.union(incidents,oldincidents);
+			else _all =ld.union(incidents,oldincidents);
 
 
 
@@ -241,7 +243,7 @@ function _findChangeLog(incidentId,callback){
 		logger.debug("docs.length = "+docs.length);
 		var deltas = [];
 		for (var d in docs){
-			var _d = {changeDate:docs[d].createDate,change:_.findWhere(docs[d].CHANGED,{"id":incidentId}).diff};
+			var _d = {changeDate:docs[d].createDate,change:ld.findWhere(docs[d].CHANGED,{"id":incidentId}).diff};
 			deltas.push(_d)
 		}
 		callback(err,deltas)
@@ -252,15 +254,15 @@ function _findChangeLog(incidentId,callback){
 
 
 function _calculateStats(callback){
-	//	var _prios = _.pluck(config.mappings.snow.priority,"bpty");
+	//	var _prios = ld.pluck(config.mappings.snow.priority,"bpty");
 	var _stats= {};
 	var items =  db.collection(_incidentsCollection);
 	items.find({active:"true",state:{$ne:"Resolved"}},function(err,incidents){
 		_stats.totalOpen=incidents.length;
-		_stats.P01Open = _.where(incidents,{priority:"P01 - Critical"}).length;
-		_stats.P08Open = _.where(incidents,{priority:"P08 - High"}).length;
-		_stats.P16Open = _.where(incidents,{priority:"P16 - Moderate"}).length;
-		_stats.P120Open = _.where(incidents,{priority:"120 - Low"}).length;
+		_stats.P01Open = ld.where(incidents,{priority:"P01 - Critical"}).length;
+		_stats.P08Open = ld.where(incidents,{priority:"P08 - High"}).length;
+		_stats.P16Open = ld.where(incidents,{priority:"P16 - Moderate"}).length;
+		_stats.P120Open = ld.where(incidents,{priority:"120 - Low"}).length;
 		callback(null,_stats);
 	})
 }
@@ -332,9 +334,9 @@ function _getFromTo(range){
 
 function _calculateTotal(kpi,override){
 	logger.debug("....in calculateTotal: kpi:"+kpi+" override: "+override);
-	_.forIn(kpi,function(key,value){
+	ld.forIn(kpi,function(key,value){
 		var _total = 0;
-		_.forIn(kpi[value],function(_count,_state){
+		ld.forIn(kpi[value],function(_count,_state){
 				_total+=_count;
 		})
 		logger.debug("key. "+	key);
@@ -349,8 +351,8 @@ function _calculateTotal(kpi,override){
 }
 
 function _calculateTrends(baseline,target){
-	var _prios = _.keys(baseline);
-	var _states = _.keys(baseline[_prios[0]]);
+	var _prios = ld.keys(baseline);
+	var _states = ld.keys(baseline[_prios[0]]);
 	var _trends=[];
 
 	for (var p in _prios){
@@ -530,7 +532,7 @@ function _mapState(_state){
 
 function _mapCode(_code,_collection,_resolve){
 	var _mapping = config.mappings.snow[_collection];
-	var _lookup = _.findWhere(_mapping,{"sys":parseInt(_code)});
+	var _lookup = ld.findWhere(_mapping,{"sys":parseInt(_code)});
 	if (_lookup)
 		return _lookup[_resolve];
 	else return false;
@@ -551,8 +553,8 @@ function _filterRelevantData(data){
 		_incident.priority = data.priority;
 	}
 	else{
-		if (_.startsWith(data.number,"CHG")) _incident.priority="CH";
-		else if (_.startsWith(data.number,"Maintenance")) _incident.priority="MA";
+		if (ld.startsWith(data.number,"CHG")) _incident.priority="CH";
+		else if (ld.startsWith(data.number,"Maintenance")) _incident.priority="MA";
 	}
 
 	if (data.closed_at !="") _incident.closedAt = new moment(data.closed_at,"DD-MM-YYYY HH:mm:ss").toDate();
