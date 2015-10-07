@@ -6,8 +6,8 @@ var mongojs = require('mongojs');
 var moment = require('moment');
 var async = require("async");
 require('moment-duration-format');
-var _ = require('lodash');
-//_.nst=require('underscore.nest');
+_ = require('lodash');
+_.nst=require('underscore.nest');
 
 var DB=config.database.db;
 var HOST = config.database.host;
@@ -510,7 +510,7 @@ exports.findGroupedByPriority = function (prioritylist){
 */
 function _getOverdueGroupedByAssignmentGroup(callback){
 	_find({},{},function(err,incidents){
-		var result;// = u.nst.nest(incidents,("assignmentGroup"))
+		var result= _.nst.nest(incidents,("assignmentGroup"))
 		callback(err,result);
 	});
 }

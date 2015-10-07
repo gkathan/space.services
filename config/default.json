@@ -66,6 +66,42 @@
 		"defaultAvailablePercentageForInitiatives":0.6,
 		"defaultProductiveWorkRatio":0.9
 	},
+		"incidents": {
+		"customerImpact":{
+			"categoryExclude":["Request","Misplaced Call"]
+		},
+		"SLA":{
+			"P01":1,
+			"P08":8,
+			"P16":16,
+			"P120":120
+		}
+	},
+	"targets":{
+		"active":2015,
+		"planned":2016,
+		"kpis": {
+			"incidents":{
+				"states":["New","In progress","Awaiting","Resolved","Closed"],
+				"priorities": ["P01","P08","P16"],
+				"baseline": {
+					"openedAt" : ["2014-10-01", "2015-01-01"],
+					"categoryExclude":["Request","Misplaced Call"],
+					"totalsOverride": {"P01":94,"P08":524}
+
+				},
+				"target": {
+					"openedAt" : ["2015-10-01", "2015-12-31"],
+					"categoryExclude":["Request","Misplaced Call"],
+					"businessServiceExclude":"hardcoded",
+					"labelExclude":"hardcoded"
+					}
+				}
+			},
+		"laneSorting": ["RUN","GROW","TRANSFORM"],
+		"laneColors": {"RUN":"#00b8e4","GROW":"#82cec1","TRANSFORM":"#f99d1c"}
+	},
+
 
 	"emit": {
 		"snow_incidents_prios":["P01","P08"],
@@ -147,7 +183,7 @@
 
 		"mappings" :{
 				"snow" :{
-					"priority":[{"sys":1,"bpty":"P01 - Critical"},{"sys":2,"bpty":"P08 - High"},{"sys":3,"bpty":"P16 - Moderate"},{"sys":4,"bpty":"P40 - Low"}],
+					"priority":[{"sys":1,"bpty":"P01 - Critical"},{"sys":2,"bpty":"P08 - High"},{"sys":3,"bpty":"P16 - Moderate"},{"sys":4,"bpty":"P120 - Low"}],
 					"state":[{"sys":1,"bpty":"New"},{"sys":2,"bpty":"In Progress"},{"sys":3,"bpty":"Closed"},{"sys":8,"bpty":"Awaiting"},{"sys":9,"bpty":"Resolved"}]
 				}
 		}
