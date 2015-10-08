@@ -73,7 +73,7 @@ describe('OrganizationService', function(){
 			*/
 
 
-			orgService.getEmployeesByTargets(_mapping,null,null,null,function(err,result){
+			orgService.getEmployeesByTargetsByPeriod(_mapping,null,null,null,"2015",function(err,result){
 				logger.debug("**");
 				logger.debug("++++++++++++++++ : "+result["G1.2"]);
 
@@ -106,7 +106,7 @@ describe('OrganizationService', function(){
 			var L2TargetId = "G1.1";
 
 			var orgService = require('../services/OrganizationService');
-      orgService.getTarget2EmployeeMappingByL2Target(L2TargetId,function(err,employees){
+      orgService.getTarget2EmployeeMappingByL2TargetByPeriod(L2TargetId,"2015",function(err,employees){
 
 				console.log("employees found for target: "+L2TargetId+": "+employees.length);
 				//assert.equal("E2988", employee["Employee Number"]);
@@ -131,6 +131,21 @@ describe('OrganizationService', function(){
 			});
 		})
 	})
+
+		describe('#_findStudiosEmployees', function(){
+			it('should return all studios employees', function(done){
+				this.timeout(30000);
+
+				var orgService = require('../services/OrganizationService');
+				orgService.findStudiosEmployees(function(err,studios){
+
+					console.log(": "+studios.length);
+					
+					//assert.equal("E2988", employee["Employee Number"]);
+					done();
+				});
+			})
+		})
 
 
 

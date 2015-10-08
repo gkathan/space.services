@@ -5,7 +5,8 @@ var config = require('config');
 
 var mongojs = require('mongojs');
 
-var _ = require('lodash');
+var ld = require('lodash');
+ 	_ = require('lodash');
 	_.nst = require('underscore.nest');
 
 var DB=config.database.db;
@@ -22,6 +23,8 @@ exports.findEmployeeByFirstLastName = _findEmployeeByFirstLastName;
 exports.findEmployeeById = _findEmployeeById;
 exports.findEmployeesByFilter = _findEmployeesByFilter;
 exports.findEmployeesByFunction = _findEmployeesByFunction;
+exports.findStudiosEmployees = _findStudiosEmployees;
+
 exports.findEmployees = _findEmployees;
 exports.getEmployeesByTargetsByPeriod = _getEmployeesByTargetsByPeriod;
 exports.syncEmployeeImages = _syncEmployeeImages;
@@ -79,6 +82,18 @@ function _findEmployeesByFunction(_function, callback) {
 			return;
 	});
 }
+
+function _findStudiosEmployees(callback) {
+	logger.debug("findStudiosEmployees: ");
+
+	var organization =  db.collection('organization');
+		organization.find({$or:[{'Function':"Studios"},{'Function':"Social Gaming Ukraine"}]}).sort({$natural:1}, function (err, docs){
+			if (docs) logger.debug("[ok] found some stuff ... : "+docs.length+ " employees");
+			callback(err,docs);
+			return;
+	});
+}
+
 
 function _findEmployees(callback) {
 	logger.debug("findEmployees: all");
@@ -144,7 +159,7 @@ function _getTarget2EmployeeMappingByL2TargetByPeriod(L2TargetId,period,callback
 					var _employee = docs.children[i];
 					//logger.debug("*** _employee: "+JSON.stringify(_employee));
 
-					var _emp = _.findWhere(allEmployees,{"Employee Number":_employee.name});
+					var _emp = ld.findWhere(allEmployees,{"Employee Number":_employee.name});
 					if (!_emp) _emp = _employee;
 
 					var _e ={employee:_emp,outcomes:[]};
@@ -174,7 +189,7 @@ function _findOutcomesForEmployeeByPeriod(employeeId,period,callback) {
 
 	var _outcomes =[];
 	_findTarget2EmployeeMappingClusteredByPeriod(period,function(err,employees){
-			var _targets=_.findWhere(employees.children,{name:employeeId});
+			var _targets=ld.findWhere(employees.children,{name:employeeId});
 			if (_targets && _targets.children){
 				logger.debug("_targets.children: "+_targets.children.length);
 				for (var t in _targets.children){
@@ -230,10 +245,10 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 				var _map = target2employeeMapping[i];
 				for (var t in _map.targets){
 					if (_targets.indexOf(_map.targets[t])<0){
-					//if (!_.findWhere(_targets,{"id":_map.targets[t]})){
+					//if (!ld.findWhere(_targets,{"id":_map.targets[t]})){
 						var _targetId = _map.targets[t];
 						logger.debug("_targetId: "+_targetId);
-						//var _t = _.findWhere(targets,{"id":_targetId});
+						//var _t = ld.findWhere(targets,{"id":_targetId});
 						_targets.push(_targetId);
 					}
 				}
@@ -243,7 +258,7 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 			var _data=[];
 
 			for (var t in _targets){
-				var _target = _.findWhere(targets,{"id":_targets[t]});
+				var _target = ld.findWhere(targets,{"id":_targets[t]});
 				logger.debug("--- find target: "+_targets[t]);
 				if (_target){
 					var _targetId = _target.id;
@@ -251,13 +266,13 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 						var _map = target2employeeMapping[m];
 						if (_map.targets.indexOf(_targetId)>-1){
 
-							if (!_.findWhere(_data,{"name":_targetId})){
+							if (!ld.findWhere(_data,{"name":_targetId})){
 								// this has to be done for a new target
 								_data.push({name:_targetId,theme:_target.theme,cluster:_target.cluster,group:_target.group,target:_target.target,type:"L2target",children:[]});
 							}
-							var _targetBucket = _.findWhere(_data,{"name":_targetId});
+							var _targetBucket = ld.findWhere(_data,{"name":_targetId});
 							// do some enriching from org collection
-							var _employee = _.findWhere(employees,{"Employee Number":_map.employeeId});
+							var _employee = ld.findWhere(employees,{"Employee Number":_map.employeeId});
 							var _costCenter;
 							var _location;
 							var _function;
@@ -271,7 +286,7 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 							}
 
 							// check whether this employee is already in
-							if (!_.findWhere(_target.children,{"id":_map.employeeId})){
+							if (!ld.findWhere(_target.children,{"id":_map.employeeId})){
 								_targetBucket.children.push({id:_map.employeeId,name:_map.employeeName,location:_location,function:_function,costCenter:_costcenter,vertical:_vertical,organization:_organization});
 							}
 						}
@@ -287,7 +302,7 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 			logger.debug("+++++++++++++++ showTargetTree: "+showTargetTree);
 
 			if (pickL2){
-				_data = _.where(_data,{"name":pickL2});
+				_data = ld.where(_data,{"name":pickL2});
 			}
 
 			_.nst = require('underscore.nest');
@@ -311,7 +326,7 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 			}
 			else{
 				logger.debug("***************** _data: "+JSON.stringify(_data));
-				var _pickedTarget = _.findWhere(targets,{"id":pickL2});
+				var _pickedTarget = ld.findWhere(targets,{"id":pickL2});
 				if (_pickedTarget){
 					var _context = _pickedTarget.theme;
 					_results.push({name:_context,children:_data})
@@ -430,16 +445,16 @@ function _getOrganizationTrend(filter,callback){
 function _groupByAttribute(list,attribute,previous){
 	//logger.debug("---------------- "+o);
 
-	var _attributes = _.groupBy(list,function(n){return n[attribute];})
+	var _attributes = ld.groupBy(list,function(n){return n[attribute];})
 	var _attributelist=[]
 	var _sum = 0;
-	_.forEach(_attributes,function(value,key){
+	ld.forEach(_attributes,function(value,key){
 		var _a ={};
 		_a.name=key;
 		_a.sum = value.length;
 		_sum+=value.length;
-		if (previous && _.findWhere(previous,{"name":key})){
-			_a.delta=_a.sum-_.findWhere(previous,{"name":key}).sum;
+		if (previous && ld.findWhere(previous,{"name":key})){
+			_a.delta=_a.sum-ld.findWhere(previous,{"name":key}).sum;
 		}
 		_attributelist.push(_a);
 	})
