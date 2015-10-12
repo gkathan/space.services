@@ -30,7 +30,8 @@ exports.findEmployeesHistory = _findEmployeesHistory;
 
 exports.findEmployees = _findEmployees;
 exports.getTree = _getTree;
-exports.getTreeByDate = _getTreeByDate;
+exports.getTreeHistory = _getTreeHistory;
+exports.getTreeHistoryBelow = _getTreeHistoryBelow;
 exports.getTreeBelow = _getTreeBelow;
 exports.getEmployeesByTargetsByPeriod = _getEmployeesByTargetsByPeriod;
 exports.syncEmployeeImages = _syncEmployeeImages;
@@ -120,10 +121,15 @@ function _findEmployeesHistory(date,callback) {
       if (doc){
         employees=doc.oItems;
         logger.debug("[ok] found some stuff ... : "+employees.length+" employees");
+			   callback(err, employees);
+         return;
       }
-      else logger.debug("_findEmployeesHistory...nothing found");
-			callback(err, employees);
-			return;
+      else{
+         logger.debug("_findEmployeesHistory...nothing found");
+			   callback(err, employees);
+         return;
+       }
+
 	});
 }
 
@@ -459,62 +465,57 @@ function _getRootBy(name,value,tree){
   return _root;
 }
 
+/**
+* orchestration function
+* @param employees: flat list of orgchart data
+* @param belowRoot: object with name, value which specifies the search critera for alternate root node
+*/
+function _buildTree(employees,belowRoot){
+  var _tree = _getRootBy("job","CEO",_createTree(employees));
+  //other root the top node
+  if (belowRoot){
+    _tree = _searchTreeBy(_tree,belowRoot.name,belowRoot.value);
+  }
 
+  if (_tree){
+    var _total = _count(_tree,0);
+    _enrich(_tree);
+    var statLevels = _calculateTreeStats(_tree);
+    var _overall = _calculateLevelStats(_tree,statLevels);
+    return {tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}};
+  }
+  else return false
+}
 
 function _getTree (callback){
 	_findEmployees(function(err,employees){
-    //var _tree = _createTree(employees)[0];
-    var _tree = _getRootBy("job","CEO",_createTree(employees));
-    if (_tree){
-      var _total = _count(_tree,0);
-      _enrich(_tree);
-      var statLevels = _calculateTreeStats(_tree);
-      logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
-      var _overall = _calculateLevelStats(_tree,statLevels);
-      logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
-      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
-    }
-    else
-      callback({message:"no tree found..."},null);
+    var _tree = _buildTree(employees);
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
   })
 }
 
-function _getTreeByDate (date,callback){
+function _getTreeHistory (date,callback){
 	_findEmployeesHistory(date,function(err,employees){
-    if (employees){
-      //var _tree = _createTree(employees)[0];
-      var _tree = _getRootBy("job","CEO",_createTree(employees));
-      var _total = _count(_tree,0);
-      _enrich(_tree);
-      var statLevels = _calculateTreeStats(_tree);
-      var _overall = _calculateLevelStats(_tree,statLevels);
-
-
-      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
-    }
-    else{
-      callback({message:"nothing found"},null);
-    }
+    var _tree = _buildTree(employees);
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
   })
 }
 
 function _getTreeBelow (name,callback){
   _findEmployees(function(err,employees){
-    var tree = _getRootBy("job","CEO",_createTree(employees));
-    var _tree = _searchTreeBy(tree,"employee",name);
-    if (_tree){
-      logger.debug("-------------- get Tree BELOW");
-      var _total = _count(_tree,0);
-      _enrich(_tree);
-      var statLevels = _calculateTreeStats(_tree);
-      var _overall = _calculateLevelStats(_tree,statLevels);
-      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
-    }
-    else{
-      logger.debug("....nothing found for: "+name);
-      callback({message:"nothing found for: "+name},null);
-    }
+    var _tree = _buildTree(employees,{name:"employee",value:name});
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
+  })
+}
 
+function _getTreeHistoryBelow (date,name,callback){
+  _findEmployeesHistory(date,function(err,employees){
+    var _tree = _buildTree(employees,{name:"employee",value:name});
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
   })
 }
 
@@ -669,7 +670,7 @@ function _count(tree,sum){
 	if (!tree.children){
 		//console.log("-- leaf: "+tree.name+" supervisor: "+tree.parent.name+"  has "+tree.parent.children.length+" direct reports");
 		//console.log("-- leaf: "+tree.name+" supervisor: "+tree.parent);
-		return 1;
+    return 1;
 	}
 
 	var _s =1;
@@ -680,7 +681,7 @@ function _count(tree,sum){
 	}
 	var _overall=sum+_s-1;
 	tree.overallReports=_overall;
-	tree.leafOnly=_leafOnly;
+	tree.leafOnlyReports=_leafOnly;
 
 	tree.directReports=tree.children.length;
 	tree.averageSubordinates = Math.round((_overall-tree.directReports)/tree.directReports);
@@ -729,10 +730,13 @@ function _calculateTreeStats(tree){
 	//only if tree consists of no children then we have already on top of tree a leaf node ;-)
 	if (!tree.children) stats.push({leafOnly:0});
 	for (var o in orgLevels){
-		var s = {leafOnly:0,termination:0,total:orgLevels[o].length};
+		var s = {leafOnlyReports:0,overallReports:0,directReports:0,termination:0,total:orgLevels[o].length};
 		for (var l in orgLevels[o]){
-			if (orgLevels[o][l].leafOnly) s.leafOnly+=orgLevels[o][l].leafOnly;
+			if (orgLevels[o][l].leafOnlyReports) s.leafOnlyReports+=orgLevels[o][l].leafOnlyReports;
 			if (orgLevels[o][l].terminationDate) s.termination++;
+      if (orgLevels[o][l].overallReports) s.overallReports+=orgLevels[o][l].overallReports;
+      if (orgLevels[o][l].directReports) s.directReports+=orgLevels[o][l].directReports;;
+
 		}
 		stats.push(s)
 	}
@@ -750,44 +754,73 @@ function _calculateLevelStats(tree,statLevels){
   logger.debug("_calculateLevelStats: MAX_LEVEL: "+MAX_LEVEL);
 
 	var _total = 0;
-	for (var i in levels){_total+=levels[i].length;};
-	var _sum =0;
+	for (var i in levels){
+  _total+=statLevels[i].total;
+  }
+
+  var _sum =0;
 	var _sumFemale=0;
 	var _sumLeaf =0;
 	var _sumTermination = 0;
+  var _sumOverall = 0;
+
+
+  var _percentageOverall = 0;
+  var _femalePercentageOverall = 0;
+  var _internalPercentageOverall = 0;
+  var _terminationPercentageOverall = 0;
+  var _leafPercentageOverall=0;
+
+
 	for (var i in levels){
 		var _perLevel = levels[i].length;
 		var _percentage = Math.round((_perLevel/_total)*100);
-		var _female = getFemaleQuotient(levels[i]);
+    var _female = getFemaleQuotient(levels[i]);
 		var _internal = getInternalQuotient(levels[i]);
 		var _children =0;
 		var _leaf =0;
 		var _terminationPercentage = 0;
 		var _leafPercentage;
 
-		_leaf = statLevels[i].leafOnly;
-		_leafPercentage = Math.round((_leaf/_perLevel)*100);
+
+		_leaf = statLevels[i].leafOnlyReports;
+    var _overall = statLevels[i].overallReports;
+
+		_leafPercentage = Math.round((_leaf/_overall)*100);
+    
 		_terminationPercentage = Math.round((statLevels[i].termination/_perLevel)*100);
 
-		_sumLeaf+=statLevels[i].leafOnly;
+		_sumLeaf+=statLevels[i].leafOnlyReports;
 		_sumTermination+=statLevels[i].termination;
 		_sum+=_perLevel;
 		_sumFemale+=_female;
+    _sumOverall+=_overall;
 
-		console.log(levels[i].length+" - female: "+_female+"% - internal: "+_internal+"% - leaf: "+_leafPercentage);
+
+		console.log(levels[i].length+" - female: "+_female+"% - internal: "+_internal+"% - leaf: "+_leafPercentage+ "overall: "+_overall);
     statLevels[i].total=_perLevel;
+    statLevels[i].overall=_overall;
+
     statLevels[i].percentage=_percentage;
     statLevels[i].femalePercentage=_female;
     statLevels[i].internalPercentage=_internal;
     statLevels[i].leafPercentage=_leafPercentage;
     statLevels[i].terminationPercentage=_terminationPercentage;
+
+    _percentageOverall+=_percentage;
+    _femalePercentageOverall+=_female;
+    _internalPercentageOverall+=_internal;
+    _terminationPercentageOverall+=_terminationPercentage;
+    _leafPercentageOverall+=_leafPercentage;
+
 	}
 
   var _overall={};
-  _overall.femalePercentage = 0;
-  _overall.internalPercentage = 0;
-  _overall.terminantionPercentage = 0;
-  _overall.leafPercentage = 0;
+  _overall.femalePercentage = Math.round(_femalePercentageOverall/MAX_LEVEL);
+  _overall.internalPercentage = Math.round(_internalPercentageOverall/MAX_LEVEL);
+  _overall.terminationPercentage = Math.round(_terminationPercentageOverall/MAX_LEVEL);
+  _overall.leafPercentage = Math.round(_leafPercentageOverall/MAX_LEVEL);
+  _overall.percentage=Math.round(_percentageOverall);
 
   return _overall;
 }
