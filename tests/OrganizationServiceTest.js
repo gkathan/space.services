@@ -115,7 +115,7 @@ describe('OrganizationService', function(){
     })
   })
 
-
+/*
 	describe('#_getOrgTrend', function(){
 		it('should return trend data how org evolves over history', function(done){
 			this.timeout(30000);
@@ -131,18 +131,35 @@ describe('OrganizationService', function(){
 			});
 		})
 	})
-
-		describe('#_findStudiosEmployees', function(){
+*/
+		describe('#_getTree', function(){
 			it('should return all studios employees', function(done){
 				this.timeout(30000);
 
 				var orgService = require('../services/OrganizationService');
-				orgService.findStudiosEmployees(function(err,studios){
+				orgService.findEmployees(function(err,studios){
 
 					console.log(": "+studios.length);
-					
 					//assert.equal("E2988", employee["Employee Number"]);
-					done();
+
+					//var tree = orgService.getTree(_.where(studios,{"Cost Centre":"Studios Commercial Management"}));
+
+					//var tree = orgService.getTreeBelow("Christoph Haas",orgService.getTree(studios));
+					var tree = orgService.createTree(studios);
+
+					console.log(tree.length);
+
+					for (var i in tree){
+						var _t = tree[i];
+						console.log(_t.name+" - "+_t.employee+" parent: "+_t.supervisorName);
+
+					}
+
+					orgService.getTreeBelow("Marc-Alexander Lange",function(err,tree){
+							console.log("-------------- "+JSON.stringify(tree));
+							done();
+					});
+
 				});
 			})
 		})

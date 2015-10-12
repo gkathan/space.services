@@ -25,7 +25,13 @@ exports.findEmployeesByFilter = _findEmployeesByFilter;
 exports.findEmployeesByFunction = _findEmployeesByFunction;
 exports.findStudiosEmployees = _findStudiosEmployees;
 
+exports.findEmployeesHistory = _findEmployeesHistory;
+
+
 exports.findEmployees = _findEmployees;
+exports.getTree = _getTree;
+exports.getTreeByDate = _getTreeByDate;
+exports.getTreeBelow = _getTreeBelow;
 exports.getEmployeesByTargetsByPeriod = _getEmployeesByTargetsByPeriod;
 exports.syncEmployeeImages = _syncEmployeeImages;
 exports.getOrganizationHistoryDates = _getOrganizationHistoryDates;
@@ -100,11 +106,26 @@ function _findEmployees(callback) {
 	var organization =  db.collection('organization');
 		organization.find({}).sort({$natural:1}, function (err, docs){
 			if (docs) logger.debug("[ok] found some stuff ... : "+docs.length+" employees");
+      else logger.debug("...something went wrong");
 			callback(err, docs);
 			return;
 	});
 }
 
+function _findEmployeesHistory(date,callback) {
+	logger.debug("_findEmployeesHistory: for date: "+date);
+	var history =  db.collection('organizationhistory');
+		history.findOne({oDate:date} , function(err , doc){
+			var employees;
+      if (doc){
+        employees=doc.oItems;
+        logger.debug("[ok] found some stuff ... : "+employees.length+" employees");
+      }
+      else logger.debug("_findEmployeesHistory...nothing found");
+			callback(err, employees);
+			return;
+	});
+}
 
 function _findTarget2EmployeeMapping(callback) {
 	_findTarget2EmployeeMappingByPeriod(targetService.getPeriod(),callback);
@@ -339,7 +360,6 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 
 
 
-
 /**
  * http://my.bwinparty.com/api/people/images/e1000
  */
@@ -356,8 +376,6 @@ function _syncEmployeeImages(filter,callback) {
 					logger.debug(employee+" :  E: "+docs[employee]["First Name"]+" "+docs[employee]["Last Name"]);
 					var _id = docs[employee]["Employee Number"];
 					var _imageURL = "http://my.bwinparty.com/api/people/images/";
-
-
 					// [TODO]
 					// 1) detect type (PngService.detectType)
 					// 2) convert everything to png which is not png
@@ -365,8 +383,6 @@ function _syncEmployeeImages(filter,callback) {
 
 					//Lets define a write stream for our destination file
 					var destination = fs.createWriteStream('./temp/'+_id);
-
-
 					//Lets save the modulus logo now
 					request(_imageURL+_id)
 					.pipe(destination)
@@ -402,6 +418,95 @@ function _getOrganizationHistoryDates(callback){
 			else callback(null,data);
 	});
 }
+
+function _createTree(employees){
+  var _name = "Employee Number";
+  var _parent = "Supervisor Employee Number";
+
+    /*
+		//alternative parent dimension
+		var _parent,_parentFallback;
+		if (HIERARCHY_TYPE=="hr") _parent = "Supervisor Employee Number";
+		else if (HIERARCHY_TYPE=="bp") {
+			_parent = "Business Process Flow Manager Employee Number";
+			_parentFallback = "Supervisor Employee Number";
+		}
+
+		var _list = createList(orgData,"Employee Number",_parent,_parentFallback);
+		_tree = makeTree(_list);
+    */
+
+
+  var _list = _createList(employees,_name,_parent);
+	var _tree = _makeTree(_list);
+  return _tree;
+}
+
+
+/**could be that multiple roots exist in orgchart
+* this helper methods returns the one specified by name, value
+* eg norbert teufelberger has job = "CEO"
+*/
+function _getRootBy(name,value,tree){
+  var _root;
+  for (var t in tree){
+    logger.debug("++++"+tree[t].name);
+    if (tree[t][name]==value){
+      _root= tree[t];
+    }
+  }
+  return _root;
+}
+
+
+
+function _getTree (callback){
+	_findEmployees(function(err,employees){
+    //var _tree = _createTree(employees)[0];
+    var _tree = _getRootBy("job","CEO",_createTree(employees));
+    var _total = _count(_tree,0);
+    _enrich(_tree);
+    var statLevels = _calculateTreeStats(_tree);
+    logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
+    var _overall = _calculateLevelStats(_tree,statLevels);
+    logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
+    callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+  })
+}
+
+function _getTreeByDate (date,callback){
+	_findEmployeesHistory(date,function(err,employees){
+    if (employees){
+      //var _tree = _createTree(employees)[0];
+      var _tree = _getRootBy("job","CEO",_createTree(employees));
+      var _total = _count(_tree,0);
+      _enrich(_tree);
+      var statLevels = _calculateTreeStats(_tree);
+      var _overall = _calculateLevelStats(_tree,statLevels);
+
+
+      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+    }
+    else{
+      callback({message:"nothing found"},null);
+    }
+  })
+}
+
+
+
+function _getTreeBelow (name,callback){
+  _findEmployees(function(err,employees){
+    var tree = _createTree(employees);
+    var _tree = _searchTreeBy(tree[0],"employee",name);
+    var _total = _count(_tree,0);
+    _enrich(_tree);
+    var statLevels = _calculateTreeStats(_tree);
+    var _overall = _calculateLevelStats(_tree,statLevels);
+    callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+  })
+}
+
 
 function _getOrganizationTrend(filter,callback){
 	db.collection("organizationhistory").find(filter).sort({oDate:1},function(err,data){
@@ -459,4 +564,316 @@ function _groupByAttribute(list,attribute,previous){
 		_attributelist.push(_a);
 	})
 	return _attributelist;
+}
+
+/**
+ * prepares the flat array for input into tree creation
+ * @param:name defines the mapping attribute for name
+ * @param:parent defines the mapping attribute for parent
+ * @param:parentBase: fallback if parent has no value
+ * */
+function _createList(data,name,parent,parentBase){
+	var _list = new Array();
+	var i=0;
+	for (d in data){
+		var row ={};
+		row["name"]=data[d][name];
+		row["parent"]=data[d][parent]?data[d][parent]:data[d][parentBase];
+
+		row["employee"]=data[d]["First Name"]+" "+data[d]["Last Name"];;//data[d]["Full Name"];
+		row["supervisor"]=data[d][parent];
+    row["supervisorName"]=data[d]["Supervisor Full Name"];
+
+		row["function"]=data[d]["Function"];
+		row["position"]=data[d]["Position"];
+		row["vertical"]=data[d]["Vertical"];
+		row["location"]=data[d]["Location"];
+		row["costcenter"]=data[d]["Cost Centre"];
+    row["legalentity"]=data[d]["Employing Legal Entity"];
+    row["contract"]=data[d]["Contract Type"];
+
+		row["gender"]=data[d]["Gender"];
+		row["ageYears"]=((new Date() - new Date(data[d]["Date Of Birth"]))/(1000*60*60*24*365)).toFixed(1);
+		row["companyYears"]=((new Date() - new Date(data[d]["Date Of Entry"]))/(1000*60*60*24*365)).toFixed(1);
+		row["terminationDate"]=data[d]["Actual Termination Date"];
+
+		row["jobTitle"]=data[d]["Corporate Job Title"];
+		row["jobTitleLocal"]=data[d]["Local Job Title"];
+		row["jobTitle"]=data[d]["Corporate Job Title"];
+		row["job"]=data[d]["Job"];
+
+		row["scrum1"]=data[d]["Scrum Team 1"];
+		row["scrumMaster"]=data[d]["Scrum Master Name"];
+		row["contractType"]=data[d]["Contract Type"];
+		row["dateHired"]=data[d]["Date Of Entry"];
+		row["dateTermination"]= data[d]["Actual Termination Date"];
+
+		_list.push(row);
+	}
+	return _list;
+}
+
+
+/**
+ * builds a tree structure from flat array which has parent information
+*/
+function _makeTree(data){
+	// *********** Convert flat data into a nice tree ***************
+	// create a name: node map
+	var dataMap = data.reduce(function(map, node) {
+		map[node.name] = node;
+		return map;
+	}, {});
+
+	// create the tree array
+	var treeData = [];
+	data.forEach(function(node) {
+		// add to parent
+		//console.log("------------------------  [forEach] node:"+JSON.stringify(node));
+		var parent = dataMap[node.parent];
+		//console.log("[parent]:"+JSON.stringify(parent));
+		if (parent) {
+			// create child array if it doesn't exist
+			(parent.children || (parent.children = []))
+				// add node to child array
+				.push(node);
+		} else {
+  		//console.log("******************************** no parent found - push to treeData !!!");//+JSON.stringify(node));
+  		// parent is null or missing
+  		treeData.push(node);
+		}
+	});
+	//console.log("[treeData]: "+treeData.length);
+
+	return treeData;
+}
+
+/**
+ * calculates the total cumulative "weight" (=sum of all descendants in a tree)
+ * and attaches this as attribute "sumDescendants" in the array
+ */
+function _count(tree,sum){
+	//console.log("(debug)...in count: "+tree.name);
+	if (!tree.children){
+		//console.log("-- leaf: "+tree.name+" supervisor: "+tree.parent.name+"  has "+tree.parent.children.length+" direct reports");
+		//console.log("-- leaf: "+tree.name+" supervisor: "+tree.parent);
+		return 1;
+	}
+
+	var _s =1;
+	var _leafOnly=0;
+	for (var c in tree.children){
+		_s+=_count(tree.children[c],sum);
+		if (!tree.children[c].children) _leafOnly+=1;
+	}
+	var _overall=sum+_s-1;
+	tree.overallReports=_overall;
+	tree.leafOnly=_leafOnly;
+
+	tree.directReports=tree.children.length;
+	tree.averageSubordinates = Math.round((_overall-tree.directReports)/tree.directReports);
+
+	//console.log(tree.name+" (level: "+tree.depth+" - has: "+tree.children.length+" children"+" ...overall below reports: = "+(_overall));
+	return (sum+_s);
+}
+
+
+/** after count we can enrich
+ */
+function _enrich(tree,level,orgTree){
+	var orgTree;
+  //console.log("*start enrich...");
+	if (!level){
+    level=0;
+    orgTree=tree;
+  }
+	tree.level=level;
+
+	if (!tree.children) return level ;
+	else level++;
+	for (var c in tree.children){
+		_enrich(tree.children[c],level,orgTree);
+	}
+
+	// at this point we just have "text reference" to parent, not yet an object ....
+	//console.log("...looking for parent: "+tree.parent);
+  var _parent = _searchTreeBy(orgTree,"name",tree.parent);
+
+	if (_parent){
+		tree.averageDeviation= tree.overallReports-_parent.averageSubordinates;
+		//console.log("----setting deviation: "+tree.averageDeviation);
+	}
+	//return level;
+}
+
+/** doing some calculations
+ * 1) counts the number of nodes overall per depth level
+ */
+function _calculateTreeStats(tree){
+	orgLevels = traverseBF(tree);
+	MAX_LEVEL=orgLevels.length;
+  logger.debug("_calculateTreeStats: MAX_LEVEL: "+MAX_LEVEL);
+	var stats=new Array();
+	//only if tree consists of no children then we have already on top of tree a leaf node ;-)
+	if (!tree.children) stats.push({leafOnly:0});
+	for (var o in orgLevels){
+		var s = {leafOnly:0,termination:0,total:orgLevels[o].length};
+		for (var l in orgLevels[o]){
+			if (orgLevels[o][l].leafOnly) s.leafOnly+=orgLevels[o][l].leafOnly;
+			if (orgLevels[o][l].terminationDate) s.termination++;
+		}
+		stats.push(s)
+	}
+	return stats;
+}
+
+/**
+on top some more metrics about each level
+*/
+function _calculateLevelStats(tree,statLevels){
+	//getting tree clustered by levels
+  var levels = traverseBF(tree);
+	var MAX_LEVEL = levels.length;
+
+  logger.debug("_calculateLevelStats: MAX_LEVEL: "+MAX_LEVEL);
+
+	var _total = 0;
+	for (var i in levels){_total+=levels[i].length;};
+	var _sum =0;
+	var _sumFemale=0;
+	var _sumLeaf =0;
+	var _sumTermination = 0;
+	for (var i in levels){
+		var _perLevel = levels[i].length;
+		var _percentage = Math.round((_perLevel/_total)*100);
+		var _female = getFemaleQuotient(levels[i]);
+		var _internal = getInternalQuotient(levels[i]);
+		var _children =0;
+		var _leaf =0;
+		var _terminationPercentage = 0;
+		var _leafPercentage;
+
+		_leaf = statLevels[i].leafOnly;
+		_leafPercentage = Math.round((_leaf/_perLevel)*100);
+		_terminationPercentage = Math.round((statLevels[i].termination/_perLevel)*100);
+
+		_sumLeaf+=statLevels[i].leafOnly;
+		_sumTermination+=statLevels[i].termination;
+		_sum+=_perLevel;
+		_sumFemale+=_female;
+
+		console.log(levels[i].length+" - female: "+_female+"% - internal: "+_internal+"% - leaf: "+_leafPercentage);
+    statLevels[i].total=_perLevel;
+    statLevels[i].percentage=_percentage;
+    statLevels[i].femalePercentage=_female;
+    statLevels[i].internalPercentage=_internal;
+    statLevels[i].leafPercentage=_leafPercentage;
+    statLevels[i].terminationPercentage=_terminationPercentage;
+	}
+
+  var _overall={};
+  _overall.femalePercentage = 0;
+  _overall.internalPercentage = 0;
+  _overall.terminantionPercentage = 0;
+  _overall.leafPercentage = 0;
+
+  return _overall;
+}
+
+
+
+function _t(tree){
+	console.log("_t says: visited "+tree.name+" level: "+tree.level);
+}
+
+
+function traverseBF(node,func){
+	var q = [node];
+	var levels = new Array();
+	var count=0;
+    while (q.length > 0) {
+        count++;
+        node = q.shift();
+        if (!levels[node.level]) levels[node.level] = new Array();
+        levels[node.level].push(node);
+        if (func) {
+            func(node);
+        }
+        _.each(node.children, function (child) {
+            q.push(child);
+        });
+	}
+	console.log("MAX level = "+levels.length+" --- count="+count);
+	return levels;
+}
+
+
+function segmentByCriteria(data,criteria){
+	return _.nst.nest(data,[criteria]);
+}
+
+function segmentByGender(data){
+	return segmentByCriteria(data,"gender");
+}
+
+function segmentByContractType(data){
+	return segmentByCriteria(data,"contractType");
+}
+
+function segmentByScrumTeam(data){
+	 return segmentByCriteria(data,"Scrum Team 1");
+}
+
+/**returns percent rounded
+ */
+function getFemaleQuotient(data,criteria){
+	var segment;
+	if (criteria) segment = segmentByCriteria(data,criteria);
+	else segment = segmentByGender(data);
+	var _female = 0;
+	var _male = 0;
+	for (var i in segment.children){
+		if (segment.children[i].name=="Female") _female=segment.children[i].children.length;
+		if (segment.children[i].name=="Male") _male=segment.children[i].children.length;
+	}
+	return Math.round((_female/(_male+_female))*100)
+}
+
+
+function getInternalQuotient(data,criteria){
+	var segment;
+	if (criteria) segment = segmentByCriteria(data,criteria);
+	else segment = segmentByContractType(data);
+	var _internal = 0;
+	var _nonInternal = 0;
+	for (var i in segment.children){
+		if (segment.children[i].name=="Internal") _internal=segment.children[i].children.length;
+		else _nonInternal+=segment.children[i].children.length;
+	}
+	return Math.round((_internal/(_internal+_nonInternal))*100)
+}
+
+/**
+ * recursive search by name and value
+ * and returns the match as new root
+ */
+function _searchTreeBy(node,searchName,searchValue){
+  	var children = node.children;
+  	if (children){
+  		for (var i in children){
+        if (children[i][searchName] == searchValue){
+          return children[i];
+        }
+        else{
+          var found = _searchTreeBy(children[i],searchName,searchValue);
+          if (found){
+             //console.log("xxxxxx");
+             return found;
+          }
+        }
+  		}
+  	}
+    else{
+      return;
+    }
 }
