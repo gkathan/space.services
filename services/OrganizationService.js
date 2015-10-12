@@ -464,13 +464,17 @@ function _getTree (callback){
 	_findEmployees(function(err,employees){
     //var _tree = _createTree(employees)[0];
     var _tree = _getRootBy("job","CEO",_createTree(employees));
-    var _total = _count(_tree,0);
-    _enrich(_tree);
-    var statLevels = _calculateTreeStats(_tree);
-    logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
-    var _overall = _calculateLevelStats(_tree,statLevels);
-    logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
-    callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+    if (_tree){
+      var _total = _count(_tree,0);
+      _enrich(_tree);
+      var statLevels = _calculateTreeStats(_tree);
+      logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
+      var _overall = _calculateLevelStats(_tree,statLevels);
+      logger.debug("-----after stats calculation MAX_LEVEL: "+statLevels.length);
+      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+    }
+    else
+      callback({message:"no tree found..."},null);
   })
 }
 
@@ -499,11 +503,19 @@ function _getTreeBelow (name,callback){
   _findEmployees(function(err,employees){
     var tree = _createTree(employees);
     var _tree = _searchTreeBy(tree[0],"employee",name);
-    var _total = _count(_tree,0);
-    _enrich(_tree);
-    var statLevels = _calculateTreeStats(_tree);
-    var _overall = _calculateLevelStats(_tree,statLevels);
-    callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+    if (_tree){
+      logger.debug("-------------- get Tree BELOW");
+      var _total = _count(_tree,0);
+      _enrich(_tree);
+      var statLevels = _calculateTreeStats(_tree);
+      var _overall = _calculateLevelStats(_tree,statLevels);
+      callback(null,{tree:_tree,stats:{levels:statLevels,overAll:_overall,total:_total}});
+    }
+    else{
+      logger.debug("....nothing found for: "+name);
+      callback({message:"nothing found for: "+name},null);
+    }
+
   })
 }
 
