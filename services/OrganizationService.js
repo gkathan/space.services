@@ -439,6 +439,7 @@ function _createTree(employees){
 
   var _list = _createList(employees,_name,_parent);
 	var _tree = _makeTree(_list);
+
   return _tree;
 }
 
@@ -497,12 +498,10 @@ function _getTreeByDate (date,callback){
   })
 }
 
-
-
 function _getTreeBelow (name,callback){
   _findEmployees(function(err,employees){
-    var tree = _createTree(employees);
-    var _tree = _searchTreeBy(tree[0],"employee",name);
+    var tree = _getRootBy("job","CEO",_createTree(employees));
+    var _tree = _searchTreeBy(tree,"employee",name);
     if (_tree){
       logger.debug("-------------- get Tree BELOW");
       var _total = _count(_tree,0);
@@ -622,6 +621,7 @@ function _createList(data,name,parent,parentBase){
 
 		_list.push(row);
 	}
+  logger.debug("_createList [DONE]: "+_list.length);
 	return _list;
 }
 
