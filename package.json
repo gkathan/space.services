@@ -1,6 +1,6 @@
 {
   "name": "space.services",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "description": "s p a c e shared services lib",
   "main": "index.js",
   "scripts": {

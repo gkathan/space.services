@@ -388,7 +388,9 @@ function _enrichBacklogs(backlogs,planningbacklogs){
 	// and join the empty backlogs
 	for (var b in backlogs){
 		var _b = backlogs[b];
-		_b.Capacity=_.findWhere(planningbacklogs,{Name:_b.Name}).Capacity;
+		var _pb = _.findWhere(planningbacklogs,{Name:_b.Name});
+		_b.Capacity=_pb.Capacity;
+		_b.Owner=_pb.Owner;
 	}
 	for (var p in planningbacklogs){
 		var _p = planningbacklogs[p];
