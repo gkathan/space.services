@@ -34,7 +34,6 @@ exports.getTreeHistory = _getTreeHistory;
 exports.getTreeHistoryBelow = _getTreeHistoryBelow;
 exports.getTreeBelow = _getTreeBelow;
 exports.getEmployeesByTargetsByPeriod = _getEmployeesByTargetsByPeriod;
-exports.syncEmployeeImages = _syncEmployeeImages;
 exports.getOrganizationHistoryDates = _getOrganizationHistoryDates;
 exports.findTarget2EmployeeMappingByPeriod = _findTarget2EmployeeMappingByPeriod;
 exports.findTarget2EmployeeMappingClusteredByPeriod = _findTarget2EmployeeMappingClusteredByPeriod;
@@ -366,47 +365,6 @@ function _getEmployeesByTargetsByPeriod(target2employeeMapping,pickL2,showTarget
 
 
 
-/**
- * http://my.bwinparty.com/api/people/images/e1000
- */
-function _syncEmployeeImages(filter,callback) {
-	var fs = require('fs');
-  var request = require('request');
-
-	logger.debug("***** sync....");
-
-	var organization =  db.collection('organization');
-		organization.find(filter).sort({$natural:1}, function (err, docs){
-			if (docs){
-				for (var employee in docs){
-					logger.debug(employee+" :  E: "+docs[employee]["First Name"]+" "+docs[employee]["Last Name"]);
-					var _id = docs[employee]["Employee Number"];
-					var _imageURL = "http://my.bwinparty.com/api/people/images/";
-					// [TODO]
-					// 1) detect type (PngService.detectType)
-					// 2) convert everything to png which is not png
-					// 3) squarifyandcirclecrop
-
-					//Lets define a write stream for our destination file
-					var destination = fs.createWriteStream('./temp/'+_id);
-					//Lets save the modulus logo now
-					request(_imageURL+_id)
-					.pipe(destination)
-					.on('error', function(error){
-					    console.log(error);
-					});
-
-					/*
-					download(_imageURL, _id+'.png', function(){
-					  console.log('done: '+_id);
-					});
-					*/
-				}
-				callback(null,"done");
-			}
-
-		});
-	}
 
 
 /**
@@ -787,7 +745,7 @@ function _calculateLevelStats(tree,statLevels){
     var _overall = statLevels[i].overallReports;
 
 		_leafPercentage = Math.round((_leaf/_overall)*100);
-    
+
 		_terminationPercentage = Math.round((statLevels[i].termination/_perLevel)*100);
 
 		_sumLeaf+=statLevels[i].leafOnlyReports;
