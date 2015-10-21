@@ -137,16 +137,14 @@ describe('OrganizationService', function(){
 				this.timeout(30000);
 
 				var orgService = require('../services/OrganizationService');
-				orgService.findEmployees(function(err,studios){
+				orgService.getTree(function(err,tree){
 
-					console.log(": "+studios.length);
 					//assert.equal("E2988", employee["Employee Number"]);
 
 					//var tree = orgService.getTree(_.where(studios,{"Cost Centre":"Studios Commercial Management"}));
 
 					//var tree = orgService.getTreeBelow("Christoph Haas",orgService.getTree(studios));
-					var tree = orgService.createTree(studios);
-
+					
 					console.log(tree.length);
 
 					for (var i in tree){

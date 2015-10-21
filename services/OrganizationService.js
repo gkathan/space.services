@@ -47,7 +47,7 @@ exports.getOrganizationTrend = _getOrganizationTrend;
 function _findEmployeeByFirstLastName(firstname,lastname, callback) {
 	logger.debug("findEmployeeByFirstLastName first: "+firstname+", last: "+lastname);
 	var organization =  db.collection('organization');
-		organization.find({'First Name':firstname,'Last Name':lastname}).sort({$natural:1}, function (err, docs){
+		organization.find({'First Name':new RegExp(firstname),'Last Name':new RegExp(lastname)}).sort({$natural:1}, function (err, docs){
 			if (err) logger.error("[ERROR] something went wrong..."+err.message);
 			if (docs) logger.debug("[ok] found some stuff ... : "+JSON.stringify(docs));
 			callback(err,docs[0]);
