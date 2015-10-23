@@ -563,7 +563,11 @@ function _createList(data,name,parent,parentBase){
 
 		row["gender"]=data[d]["Gender"];
 		row["ageYears"]=((new Date() - new Date(data[d]["Date Of Birth"]))/(1000*60*60*24*365)).toFixed(1);
-		row["companyYears"]=((new Date() - new Date(data[d]["Date Of Entry"]))/(1000*60*60*24*365)).toFixed(1);
+
+    if (data[d]["Date Of Entry"])
+      row["companyYears"]=((new Date() - new Date(data[d]["Date Of Entry"]))/(1000*60*60*24*365)).toFixed(1);
+    else if (data[d]["Date First Hired"])
+      row["companyYears"]=((new Date() - new Date(data[d]["Date First Hired"]))/(1000*60*60*24*365)).toFixed(1);
 		row["terminationDate"]=data[d]["Actual Termination Date"];
 
 		row["jobTitle"]=data[d]["Corporate Job Title"];
