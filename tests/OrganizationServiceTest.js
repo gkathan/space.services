@@ -137,14 +137,14 @@ describe('OrganizationService', function(){
 				this.timeout(30000);
 
 				var orgService = require('../services/OrganizationService');
-				orgService.getTree(function(err,tree){
+				orgService.getTree("hr",function(err,tree){
 
 					//assert.equal("E2988", employee["Employee Number"]);
 
 					//var tree = orgService.getTree(_.where(studios,{"Cost Centre":"Studios Commercial Management"}));
 
 					//var tree = orgService.getTreeBelow("Christoph Haas",orgService.getTree(studios));
-					
+
 					console.log(tree.length);
 
 					for (var i in tree){
@@ -153,7 +153,7 @@ describe('OrganizationService', function(){
 
 					}
 
-					orgService.getTreeBelow("Marc-Alexander Lange",function(err,tree){
+					orgService.getTreeBelow("Marc-Alexander Lange","hr",function(err,tree){
 							console.log("-------------- "+JSON.stringify(tree));
 							done();
 					});

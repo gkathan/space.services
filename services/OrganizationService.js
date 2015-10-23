@@ -383,25 +383,24 @@ function _getOrganizationHistoryDates(callback){
 	});
 }
 
-function _createTree(employees){
+/**
+  param hierarchyType: "bp" for business process flowchart, "hr" for internal hr tax
+ */
+function _createTree(employees,hierarchyType){
+  if (!hierarchyType) hierarchyType="hr"
   var _name = "Employee Number";
   var _parent = "Supervisor Employee Number";
-
-    /*
-		//alternative parent dimension
-		var _parent,_parentFallback;
-		if (HIERARCHY_TYPE=="hr") _parent = "Supervisor Employee Number";
-		else if (HIERARCHY_TYPE=="bp") {
-			_parent = "Business Process Flow Manager Employee Number";
-			_parentFallback = "Supervisor Employee Number";
-		}
-
-		var _list = createList(orgData,"Employee Number",_parent,_parentFallback);
-		_tree = makeTree(_list);
-    */
+	//alternative parent dimension
+	var _parentFallback;
+	if (hierarchyType=="hr") _parent = "Supervisor Employee Number";
+	else if (hierarchyType=="bp") {
+		_parent = "Business Process Flow Manager Employee Number";
+		_parentFallback = "Supervisor Employee Number";
+	}
 
 
-  var _list = _createList(employees,_name,_parent);
+
+  var _list = _createList(employees,_name,_parent,_parentFallback);
 	var _tree = _makeTree(_list);
 
   return _tree;
@@ -428,8 +427,8 @@ function _getRootBy(name,value,tree){
 * @param employees: flat list of orgchart data
 * @param belowRoot: object with name, value which specifies the search critera for alternate root node
 */
-function _buildTree(employees,belowRoot){
-  var _tree = _getRootBy("job","CEO",_createTree(employees));
+function _buildTree(employees,belowRoot,hierarchyType){
+  var _tree = _getRootBy("job","CEO",_createTree(employees,hierarchyType));
   //other root the top node
   if (belowRoot){
     _tree = _searchTreeBy(_tree,belowRoot.name,belowRoot.value);
@@ -445,33 +444,33 @@ function _buildTree(employees,belowRoot){
   else return false
 }
 
-function _getTree (callback){
-	_findEmployees(function(err,employees){
-    var _tree = _buildTree(employees);
-    if (_tree) callback(null,_tree);
-    else callback({message:"no tree found..."},null);
-  })
-}
-
-function _getTreeHistory (date,callback){
-	_findEmployeesHistory(date,function(err,employees){
-    var _tree = _buildTree(employees);
-    if (_tree) callback(null,_tree);
-    else callback({message:"no tree found..."},null);
-  })
-}
-
-function _getTreeBelow (name,callback){
+function _getTree (hierarchyType,callback){
   _findEmployees(function(err,employees){
-    var _tree = _buildTree(employees,{name:"employee",value:name});
+    var _tree = _buildTree(employees,null,hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
 }
 
-function _getTreeHistoryBelow (date,name,callback){
+function _getTreeHistory (date,hierarchyType,callback){
+	_findEmployeesHistory(date,function(err,employees){
+    var _tree = _buildTree(employees,null,hierarchyType);
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
+  })
+}
+
+function _getTreeBelow (name,hierarchyType,callback){
+  _findEmployees(function(err,employees){
+    var _tree = _buildTree(employees,{name:"employee",value:name},hierarchyType);
+    if (_tree) callback(null,_tree);
+    else callback({message:"no tree found..."},null);
+  })
+}
+
+function _getTreeHistoryBelow (date,name,hierarchyType,callback){
   _findEmployeesHistory(date,function(err,employees){
-    var _tree = _buildTree(employees,{name:"employee",value:name});
+    var _tree = _buildTree(employees,{name:"employee",value:name},hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
