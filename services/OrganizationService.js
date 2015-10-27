@@ -460,17 +460,17 @@ function _getTreeHistory (date,hierarchyType,callback){
   })
 }
 
-function _getTreeBelow (name,hierarchyType,callback){
+function _getTreeBelow (below,hierarchyType,callback){
   _findEmployees(function(err,employees){
-    var _tree = _buildTree(employees,{name:"employee",value:name},hierarchyType);
+    var _tree = _buildTree(employees,{name:below.name,value:below.value},hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
 }
 
-function _getTreeHistoryBelow (date,name,hierarchyType,callback){
+function _getTreeHistoryBelow (date,below,hierarchyType,callback){
   _findEmployeesHistory(date,function(err,employees){
-    var _tree = _buildTree(employees,{name:"employee",value:name},hierarchyType);
+    var _tree = _buildTree(employees,{name:below.name,value:below.value},hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
