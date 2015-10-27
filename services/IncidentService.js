@@ -303,7 +303,7 @@ function _count(type,filter,callback){
 
 	var incidents;
 	if (type=="baseline") incidents =  db.collection(_oldIncidentsCollection);
-	else if (type=="target") incidents =  db.collection(_incidentsCollection);
+	else if (type=="target" || type=="compare") incidents =  db.collection(_incidentsCollection);
 	incidents.find(filter).count(function (err, res) {
 		if (err){
 			logger.error("error: "+err.message);
@@ -389,10 +389,20 @@ function _getKPIs(baseline,target,callback){
 				callback(err);
 				return;
 			}
-
 			_calculateTotal(_target.kpis,null);
 
-			callback(err,{baseline:_baseline,target:_target,trends:_calculateTrends(_baseline.kpis,_target.kpis)});
+					// additional compare dimension
+					_countKPI("compare",["NOW-90"],function(err,_compare){
+						if(err){
+							logger.error("_getKPIs says error: "+err.message);
+							callback(err);
+							return;
+						}
+						_calculateTotal(_compare.kpis,null);
+
+
+						callback(err,{baseline:_baseline,target:_target,compare:_compare,trends:_calculateTrends(_baseline.kpis,_target.kpis),trendsCompare:_calculateTrends(_baseline.kpis,_compare.kpis)});
+			})
 		})
 	})
 }
