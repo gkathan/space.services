@@ -400,6 +400,7 @@ function _getKPIs(baseline,target,callback){
 
 /**
 * calculates the KPI numbers by configured data
+db.incidents.count({priority:"P08 - High",openedAt:{$gte:new ISODate("2015-10-01"),$lt:new ISODate("2015-10-27")},category:{$nin:["Failure","Request","Misplaced Call"]},businessService:{$not:/^Workplace/},label:{$nin:["Kalixa Accept","Kalixa Pay","Kalixa Pro","Kalixa rePower","No Labels"]},assignmentGroup:{$nin:["corpIT","IT Service Desk"]}})
 */
 function _countKPI(type,range,callback){
 	var _config = config.targets.kpis.incidents[type];
@@ -422,10 +423,13 @@ function _countKPI(type,range,callback){
 		async.forEach(_states,function(_state,doneState){
 				var _filter = {priority:{$regex : _prio+".*"},openedAt:{$gte:_from,$lt:_to},state:_state,category:{$nin:_config.categoryExclude}};
 				if (_config.businessServiceExclude){
-					_filter.businessService={$not:/^Workplace/,$not:/^Kalixa/};
+					//_filter.businessService={$not:/^Workplace/};
+					for (var i in _config.businessServiceExclude){
+						_filter.businessService={$not:new RegExp(_config.businessServiceExclude[i])};
+					}
 				}
 				if (_config.labelExclude){
-					//_filter.label={$not:/^Kalixa/};
+					_filter.label={$nin:_config.labelExclude};
 				}
 				_count(type,_filter,function(err,result){
 					logger.debug("_prio: "+_prio+"...._state: "+_state+" : "+result);
