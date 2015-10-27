@@ -132,12 +132,13 @@ describe('OrganizationService', function(){
 		})
 	})
 */
-		describe('#_getTree', function(){
+		describe('#_getTreeBelow', function(){
 			it('should return all studios employees', function(done){
 				this.timeout(30000);
 
 				var orgService = require('../services/OrganizationService');
-				orgService.getTree("hr",function(err,tree){
+
+				//orgService.getTree("hr",function(err,tree){
 
 					//assert.equal("E2988", employee["Employee Number"]);
 
@@ -145,20 +146,20 @@ describe('OrganizationService', function(){
 
 					//var tree = orgService.getTreeBelow("Christoph Haas",orgService.getTree(studios));
 
+/*
 					console.log(tree.length);
 
 					for (var i in tree){
 						var _t = tree[i];
 						console.log(_t.name+" - "+_t.employee+" parent: "+_t.supervisorName);
-
 					}
-
-					orgService.getTreeBelow("Marc-Alexander Lange","hr",function(err,tree){
-							console.log("-------------- "+JSON.stringify(tree));
+*/
+					orgService.getTreeBelow({name:"name",value:"E2988"},"hr",function(err,tree){
+							console.log("--------------below:  "+JSON.stringify(tree));
 							done();
 					});
 
-				});
+	//			});
 			})
 		})
 

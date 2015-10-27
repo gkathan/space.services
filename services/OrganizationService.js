@@ -429,10 +429,13 @@ function _getRootBy(name,value,tree){
 */
 function _buildTree(employees,belowRoot,hierarchyType){
   var _tree = _getRootBy("job","CEO",_createTree(employees,hierarchyType));
+  //logger.debug("_root: "+_tree.employee);
   //other root the top node
-  if (belowRoot){
+  if (belowRoot && _.isObject(belowRoot)){
     _tree = _searchTreeBy(_tree,belowRoot.name,belowRoot.value);
   }
+  //logger.debug("tree below root _root: "+_tree.employee);
+
 
   if (_tree){
     var _total = _count(_tree,0);
@@ -462,7 +465,7 @@ function _getTreeHistory (date,hierarchyType,callback){
 
 function _getTreeBelow (below,hierarchyType,callback){
   _findEmployees(function(err,employees){
-    var _tree = _buildTree(employees,{name:below.name,value:below.value},hierarchyType);
+    var _tree = _buildTree(employees,below,hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
@@ -470,7 +473,7 @@ function _getTreeBelow (below,hierarchyType,callback){
 
 function _getTreeHistoryBelow (date,below,hierarchyType,callback){
   _findEmployeesHistory(date,function(err,employees){
-    var _tree = _buildTree(employees,{name:below.name,value:below.value},hierarchyType);
+    var _tree = _buildTree(employees,below,hierarchyType);
     if (_tree) callback(null,_tree);
     else callback({message:"no tree found..."},null);
   })
@@ -864,7 +867,8 @@ function getInternalQuotient(data,criteria){
  * and returns the match as new root
  */
 function _searchTreeBy(node,searchName,searchValue){
-  	var children = node.children;
+  if (node[searchName]==searchValue) return node;
+    var children = node.children;
   	if (children){
   		for (var i in children){
         if (children[i][searchName] == searchValue){
