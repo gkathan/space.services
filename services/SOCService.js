@@ -28,7 +28,7 @@ exports.findServicesExternal = _findServicesExternal;
 /**
 */
 function _findOutages(filter,callback) {
-  	var _outages =  db.collection('soc_outages');
+  	var _outages =  db.collection('socoutages');
 
     _outages.find(filter,function(err,result){
       if (err){
@@ -61,7 +61,7 @@ function _findLabel2Customer(filter,callback) {
 }
 
 function _findServices(filter,callback) {
-  	var _services =  db.collection('soc_services');
+  	var _services =  db.collection('socservices');
 
     _services.find(filter,function(err,result){
       if (err){

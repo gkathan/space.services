@@ -28,9 +28,9 @@ describe('SyncServices', function(){
 
       var syncService = require('../services/SyncService');
 
-			syncService.getLastSync("soc_outages",function(err,result){
+			syncService.getLastSync("socoutages",function(err,result){
 					logger.debug("Outages : "+JSON.stringify(result));
-					assert.equal("soc_outages", result.name);
+					assert.equal("socoutages", result.name);
 					done();
 			})
 
@@ -44,15 +44,15 @@ describe('SyncServices', function(){
 
 			var _syncers=[];
 
-			_syncers.push({name:"soc_outages",sync:config.sync.soc_outages});
-			_syncers.push({name:"soc_services",sync:config.sync.soc_services});
+			_syncers.push({name:"socoutages",sync:config.sync.socoutages});
+			_syncers.push({name:"socservices",sync:config.sync.socservices});
 
 			logger.debug("_syncers: "+JSON.stringify(_syncers));
 
 			syncService.getLastSyncs(_syncers,function(err,result){
 				logger.debug("LastSyncs : "+JSON.stringify(result));
 				assert.equal(2, result.length);
-				assert.equal("soc_outages",_.findWhere(result,{"name":"soc_outages"}).name);
+				assert.equal("socoutages",_.findWhere(result,{"name":"socoutages"}).name);
 				done();
 			})
 
