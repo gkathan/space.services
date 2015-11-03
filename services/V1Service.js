@@ -261,7 +261,7 @@ function _buildBacklogResult(_backlogs,teams){
 		{
 			_b.Capacity={};
 		}
-		_totalMembers+=_b.Members.length;
+		_totalMembers+=_.uniq(_.pluck(_b.Members,'ID')).length;
 		_totalTeams+=_.uniq(_.map(_b.Members,'Team')).length;
 
 		_initiatives=_.union(_initiatives,_.map(_b.Initiatives,"Number"));
