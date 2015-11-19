@@ -151,7 +151,7 @@ function _getPlanningBacklogs(filter,callback){
 			_findInitiativesWithPlanningEpics(filter,function(err,epics){
 				var _backlogs = _getBacklogsFromInitiativesWithPlanningEpics(epics,planningbacklogs);
 
-				var _result = _buildBacklogResult(_backlogs,teams);
+				var _result = _buildBacklogResult(_backlogs,teams,filter);
 				callback(null,_result);
 			});
 		});
@@ -217,7 +217,13 @@ function _buildInitiativeResult(initiatives){
 	}
 	return({initiatives:initiatives,statistics:{totalSwag:_totalSwag,totalSwagRemaining:_totalSwagRemaining,totalPlanningEpics:_totalPlanningEpics}})
 }
-function _buildBacklogResult(_backlogs,teams){
+
+/**
+ param filter: currently the only implemented filter is to selectivly only include members from certain job families
+ e.g. 	var _jobfamilies=["Test Engineer"];
+				var filter = {includeOnlyJobfamily:_jobfamilies};
+ */
+function _buildBacklogResult(_backlogs,teams,filter){
 	var _statussorting = ["Implementation","Conception","Understanding"];
 
 	var _totalSwag =0;
@@ -248,6 +254,15 @@ function _buildBacklogResult(_backlogs,teams){
 
 		_b.Initiatives=_.sortBy(_backlogs[b].Initiatives,function(i){return _statussorting.indexOf(i.Status)});
 		_b.Members = _getMembersPerPlanningBacklog(_b.Name,teams);
+
+		// if members shall be filtered - lets do it HERE and now
+		if (filter && filter.includeOnlyJobfamily){
+			_b.Members =_.filter(_b.Members,function(member){
+				return (filter.includeOnlyJobfamily.indexOf(member.JobFamily)>-1);
+			})
+		}
+
+
 		_b.TotalSwag = _iResult.statistics.totalSwag;
 		_b.TotalSwagRemaining = _backlogSwagRemaining;
 		_b.TotalProgress = (1-(_b.TotalSwagRemaining/_b.TotalSwag))*100;
