@@ -204,7 +204,7 @@ function _buildInitiativeResult(initiatives){
 		_i.PlannedStartInitiative = _i.PlannedStart;
 		_i.PlannedEndInitiative = _i.PlannedEnd
 		_i.PlannedStart = _.first(_startDates.sort());
-		_i.PlannedEnd = _.first(_endDates.sort());
+		_i.PlannedEnd = _.last(_endDates.sort());
 		_i.SwagPlanned = _swagSum;
 		if (_swagSum !=0)
 			_i.ProgressPlanned = ((1-(_swagSumRemaining/_swagSum))*100).toFixed(2);
